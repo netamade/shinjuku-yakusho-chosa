@@ -1,84 +1,98 @@
 import { useEffect, useState } from "react";
 import type { Status } from "@/data/survey";
+import { DEFAULT_WARD_ID, findWard } from "@/data/wards";
+import {
+  emptySaved,
+  loadSelectedWard,
+  loadWard,
+  safeStorage,
+  saveSelectedWard,
+  saveWard,
+  type ItemRecord,
+  type KeyValueStorage,
+  type PropertyInfo,
+  type WardSaved,
+} from "@/lib/ward-storage";
 
-const KEY = "shinjuku-yakusho-v1";
+export type { ItemRecord, PropertyInfo } from "@/lib/ward-storage";
 
-export type PropertyInfo = {
-  address: string;
-  chiban: string;
-  name: string;
-  investigator: string;
-  date: string;
-};
-
-export type ItemRecord = { status: Status; memo: string };
-
-type Saved = {
-  info: PropertyInfo;
-  records: Record<string, ItemRecord>;
-};
-
-const emptyInfo = (): PropertyInfo => ({
-  address: "",
-  chiban: "",
-  name: "",
-  investigator: "",
-  date: "",
-});
-
-function load(): Saved {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return { info: emptyInfo(), records: {} };
-    const parsed = JSON.parse(raw) as Saved;
-    return {
-      info: { ...emptyInfo(), ...parsed.info },
-      records: parsed.records ?? {},
-    };
-  } catch {
-    return { info: emptyInfo(), records: {} };
-  }
+function browserStorage(): KeyValueStorage {
+  return safeStorage(typeof window === "undefined" ? undefined : window.localStorage);
 }
 
-export function useSurveyStore() {
-  const [info, setInfo] = useState<PropertyInfo>(emptyInfo);
-  const [records, setRecords] = useState<Record<string, ItemRecord>>({});
+/** 選択中の区。初回描画後に保存値を読み、変えたら保存する。 */
+export function useSelectedWard() {
+  const [wardId, setWardIdState] = useState<string>(DEFAULT_WARD_ID);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const saved = load();
-    setInfo(saved.info);
-    setRecords(saved.records);
+    setWardIdState(loadSelectedWard(browserStorage(), (id) => findWard(id) !== undefined, DEFAULT_WARD_ID));
     setHydrated(true);
   }, []);
 
+  function setWardId(id: string) {
+    if (!findWard(id)) return;
+    setWardIdState(id);
+    saveSelectedWard(browserStorage(), id);
+  }
+
+  return { wardId, setWardId, hydrated };
+}
+
+type State = WardSaved & { wardId: string };
+
+/**
+ * 区ごとの物件情報と進捗。保存先は区ごとに分かれる。
+ * state に区 id を持たせ、区を切り替えた直後に前の区の内容を新しい区へ書かないようにしている。
+ */
+export function useSurveyStore(wardId: string, enabled = true) {
+  const [state, setState] = useState<State | null>(null);
+
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(KEY, JSON.stringify({ info, records }));
-  }, [info, records, hydrated]);
+    if (!enabled) return;
+    setState({ wardId, ...loadWard(browserStorage(), wardId) });
+  }, [wardId, enabled]);
+
+  useEffect(() => {
+    if (!state) return;
+    saveWard(browserStorage(), state.wardId, { info: state.info, records: state.records });
+  }, [state]);
+
+  const current: WardSaved = state && state.wardId === wardId ? state : emptySaved();
+  const hydrated = state !== null && state.wardId === wardId;
+
+  function update(fn: (prev: WardSaved) => WardSaved) {
+    setState((prev) => {
+      if (!prev || prev.wardId !== wardId) return prev;
+      return { wardId: prev.wardId, ...fn(prev) };
+    });
+  }
+
+  function setInfo(info: PropertyInfo) {
+    update((prev) => ({ ...prev, info }));
+  }
 
   function recordOf(id: string): ItemRecord {
-    return records[id] ?? { status: "open", memo: "" };
+    return current.records[id] ?? { status: "open", memo: "" };
   }
 
   function setStatus(id: string, status: Status) {
-    setRecords((prev) => ({
+    update((prev) => ({
       ...prev,
-      [id]: { memo: prev[id]?.memo ?? "", status },
+      records: { ...prev.records, [id]: { memo: prev.records[id]?.memo ?? "", status } },
     }));
   }
 
   function setMemo(id: string, memo: string) {
-    setRecords((prev) => ({
+    update((prev) => ({
       ...prev,
-      [id]: { status: prev[id]?.status ?? "open", memo },
+      records: { ...prev.records, [id]: { status: prev.records[id]?.status ?? "open", memo } },
     }));
   }
 
   function reset() {
-    setInfo(emptyInfo());
-    setRecords({});
+    update(() => emptySaved());
   }
 
-  return { info, setInfo, recordOf, setStatus, setMemo, reset, hydrated };
+  return { info: current.info, setInfo, recordOf, setStatus, setMemo, reset, hydrated };
 }

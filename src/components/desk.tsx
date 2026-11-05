@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   Building2,
   ClipboardCopy,
@@ -9,18 +9,19 @@ import {
   ScrollText,
 } from "lucide-react";
 import {
-  CATEGORIES,
   CHANNEL_LABEL,
-  ITEMS,
   PRIORITY_LABEL,
-  SOURCE_GUIDE,
   STATUS_LABEL,
-  STOPS,
   type Channel,
   type Status,
   type SurveyItem,
+  type WardSurvey,
 } from "@/data/survey";
-import { useSurveyStore } from "@/lib/survey-store";
+import { DEFAULT_WARD_ID, findWard, WARDS, type Ward } from "@/data/wards";
+import { surveyOf } from "@/data/ward-surveys";
+import { buildExport } from "@/lib/export-text";
+import { useSelectedWard, useSurveyStore } from "@/lib/survey-store";
+import { WardPicker } from "@/components/ward-picker";
 
 type View = "ledger" | "route" | "export";
 type ChannelFilter = "all" | Channel;
@@ -28,7 +29,19 @@ type ChannelFilter = "all" | Channel;
 const STATUSES: Status[] = ["open", "done", "hold", "na"];
 
 export function Desk() {
-  const store = useSurveyStore();
+  const selection = useSelectedWard();
+  const ward = findWard(selection.wardId) ?? findWard(DEFAULT_WARD_ID) ?? WARDS[0];
+  const survey = surveyOf(ward.id);
+  const picker = <WardPicker ward={ward} onSelect={selection.setWardId} />;
+
+  if (!survey) return <PreparingDesk ward={ward} picker={picker} />;
+  // key で区ごとに絞り込みや表示タブを初期化する。
+  return <WardDesk key={ward.id} ward={ward} survey={survey} picker={picker} />;
+}
+
+function WardDesk({ ward, survey, picker }: { ward: Ward; survey: WardSurvey; picker: ReactNode }) {
+  const store = useSurveyStore(ward.id);
+  const ITEMS = survey.items;
   const [view, setView] = useState<View>("ledger");
   const [category, setCategory] = useState<string>("すべて");
   const [channel, setChannel] = useState<ChannelFilter>("all");
@@ -47,7 +60,7 @@ export function Desk() {
       else if (status === "hold") hold += 1;
     }
     return { done, na, hold, open: ITEMS.length - done - na - hold };
-  }, [store]);
+  }, [store, ITEMS]);
 
   const filtered = useMemo(() => {
     const q = query.trim();
@@ -60,9 +73,12 @@ export function Desk() {
       const blob = [item.title, item.why, item.how, item.place, item.category, ...(item.points ?? [])].join(" ");
       return blob.includes(q);
     });
-  }, [category, channel, query, hideClosed, store]);
+  }, [category, channel, query, hideClosed, store, ITEMS]);
 
-  const exportText = useMemo(() => buildExport(store.info, store.recordOf), [store]);
+  const exportText = useMemo(
+    () => buildExport(ward.name, survey, store.info, store.recordOf),
+    [ward.name, survey, store],
+  );
 
   async function copyExport() {
     try {
@@ -78,23 +94,8 @@ export function Desk() {
     <div className="min-h-screen bg-paper text-ink">
       <header className="border-b border-line bg-card">
         <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
-          <div className="flex items-start gap-4">
-            <div
-              className="grid size-14 shrink-0 place-items-center border border-seal bg-seal font-display text-2xl text-card"
-              aria-hidden
-            >
-              調
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs tracking-widest text-seal">SHINJUKU · REAL ESTATE</p>
-              <h1 className="font-display text-2xl font-semibold leading-tight md:text-3xl">
-                新宿区 売買役所調査台帳
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted">
-                本庁舎（歌舞伎町1-4-1）を回るときの項目、窓口、電話、公式の調べ先。調査の進捗はこのブラウザに残ります。
-              </p>
-            </div>
-          </div>
+          {picker}
+          <Masthead tagline={survey.tagline} title={`${ward.name} 売買役所調査台帳`} intro={survey.intro} />
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <Field label="住居表示" value={store.info.address} onChange={(address) => store.setInfo({ ...store.info, address })} />
@@ -131,6 +132,7 @@ export function Desk() {
         {view === "ledger" && (
           <Ledger
             items={filtered}
+            categories={survey.categories}
             category={category}
             setCategory={setCategory}
             channel={channel}
@@ -142,7 +144,7 @@ export function Desk() {
             store={store}
           />
         )}
-        {view === "route" && <Route store={store} />}
+        {view === "route" && <Route survey={survey} store={store} />}
         {view === "export" && (
           <ExportPanel
             text={exportText}
@@ -154,18 +156,21 @@ export function Desk() {
         )}
 
         <footer className="mt-10 border-t border-line pt-6 text-xs leading-relaxed text-muted">
-          <p>
-            整理の軸は新宿区「都市計画情報等の調べ方（不動産調査用）」（ページ最終更新 2026年4月1日）です。都税の仮庁舎は令和8年9月24日以降の案内、埋蔵文化財のGIS照会は令和8年10月8日開始の案内に合わせています。この台帳を見た日は2026年11月5日。
-          </p>
+          {survey.footerNotes.map((note, i) => (
+            <p key={note} className={i === 0 ? undefined : "mt-2"}>
+              {note}
+            </p>
+          ))}
           <p className="mt-2">
-            告示・窓口番号・電話は変わります。重説や契約の判断の前に、原典と窓口で確認してください。これは行政の証明書でも、特定物件の調査結果でもありません。
-          </p>
-          <p className="mt-2">
-            <a className="text-seal underline decoration-line underline-offset-2" href={SOURCE_GUIDE} target="_blank" rel="noreferrer">
-              区の不動産調査ガイドを開く
+            <a className="text-seal underline decoration-line underline-offset-2" href={survey.sourceGuide} target="_blank" rel="noreferrer">
+              {survey.sourceGuideLinkLabel}
             </a>
-            <span className="px-2">·</span>
-            コールセンター 03-3209-9999（毎日8時–19時。個別の敷地の断定回答は窓口）
+            {survey.footerContact && (
+              <>
+                <span className="px-2">·</span>
+                {survey.footerContact}
+              </>
+            )}
           </p>
         </footer>
       </main>
@@ -175,6 +180,7 @@ export function Desk() {
 
 function Ledger({
   items,
+  categories,
   category,
   setCategory,
   channel,
@@ -186,6 +192,7 @@ function Ledger({
   store,
 }: {
   items: SurveyItem[];
+  categories: readonly string[];
   category: string;
   setCategory: (v: string) => void;
   channel: ChannelFilter;
@@ -196,7 +203,7 @@ function Ledger({
   setHideClosed: (v: boolean) => void;
   store: ReturnType<typeof useSurveyStore>;
 }) {
-  const cats = ["すべて", ...CATEGORIES];
+  const cats = ["すべて", ...categories];
   const channels: { id: ChannelFilter; label: string }[] = [
     { id: "all", label: "手段を問わない" },
     { id: "online", label: "オンライン" },
@@ -372,10 +379,10 @@ function ItemCard({ item, store }: { item: SurveyItem; store: ReturnType<typeof 
   );
 }
 
-function Route({ store }: { store: ReturnType<typeof useSurveyStore> }) {
-  const groups = STOPS.map((stop) => ({
+function Route({ survey, store }: { survey: WardSurvey; store: ReturnType<typeof useSurveyStore> }) {
+  const groups = survey.stops.map((stop) => ({
     stop,
-    items: ITEMS.filter((item) => item.stop === stop.id && store.recordOf(item.id).status !== "na"),
+    items: survey.items.filter((item) => item.stop === stop.id && store.recordOf(item.id).status !== "na"),
   })).filter((group) => group.items.length > 0);
 
   return (
@@ -383,16 +390,13 @@ function Route({ store }: { store: ReturnType<typeof useSurveyStore> }) {
       <div className="border border-line bg-card px-4 py-4">
         <div className="flex items-center gap-2">
           <Building2 className="size-4 text-seal" />
-          <h2 className="font-display text-xl">一日で回るなら、下から上へ</h2>
+          <h2 className="font-display text-xl">{survey.route.title}</h2>
         </div>
-        <p className="mt-2 text-sm text-muted">
-          本庁舎は1階の都市計画図、4階のハザード、7階（用地→道路→環境→住宅）、8階（都市計画→防災まち→景観→指導→調整）。埋蔵文化財は第一分庁舎。法務局・都税・水道は別棟なので同日に詰め込みすぎない。該当なしにした項目は除いています。
-        </p>
+        <p className="mt-2 text-sm text-muted">{survey.route.body}</p>
         <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <li>持ち物：公図、地番メモ、確認番号、名刺、現金（概要書の写し300円、開発登録簿700円、都市計画図各200円）</li>
-          <li>GISの印刷は自分で。区の窓口プリンターは使えない、と操作案内にある。</li>
-          <li>道路幅員と建築基準法の道路種別は、電話では答えない。</li>
-          <li>建築計画の相談は予約。斜線・角地などの敷地調査は予約不要。</li>
+          {survey.route.tips.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
         </ul>
       </div>
       {groups.map(({ stop, items }) => (
@@ -506,39 +510,70 @@ function ViewButton({
   );
 }
 
-function buildExport(
-  info: { address: string; chiban: string; name: string; investigator: string; date: string },
-  recordOf: (id: string) => { status: Status; memo: string },
-) {
-  const lines: string[] = [];
-  lines.push("新宿区 売買役所調査メモ");
-  lines.push(`住居表示: ${info.address || "（未記入）"}`);
-  lines.push(`地番: ${info.chiban || "（未記入）"}`);
-  lines.push(`物件名: ${info.name || "（未記入）"}`);
-  lines.push(`調査日: ${info.date || "（未記入）"}`);
-  lines.push(`調査者: ${info.investigator || "（未記入）"}`);
-  lines.push("");
-  lines.push("※新宿区は全区が都市計画区域・市街化区域、景観計画区域、宅地造成等工事規制区域。");
-  lines.push("※津波災害警戒区域と造成宅地防災区域は区内に指定なし（区ガイド）。");
-  lines.push("※用途地域の最低敷地面積・壁面線・第一種低層の外壁後退は用途地域としてはなし。地区計画等は別。");
-  lines.push("");
-  const buckets: { title: string; status: Status }[] = [
-    { title: "確認済", status: "done" },
-    { title: "要確認", status: "hold" },
-    { title: "該当なし", status: "na" },
-    { title: "未着手", status: "open" },
-  ];
-  for (const bucket of buckets) {
-    const rows = ITEMS.filter((item) => recordOf(item.id).status === bucket.status);
-    lines.push(`■ ${bucket.title}（${rows.length}）`);
-    if (rows.length === 0) lines.push("（なし）");
-    for (const item of rows) {
-      const memo = recordOf(item.id).memo.trim();
-      lines.push(`- ${item.title}${memo ? `：${memo}` : ""}`);
-    }
-    lines.push("");
-  }
-  lines.push("出典の起点: " + SOURCE_GUIDE);
-  lines.push("本メモは調査の控であり、行政の証明書ではない。");
-  return lines.join("\n");
+function Masthead({ tagline, title, intro }: { tagline: string; title: string; intro: string }) {
+  return (
+    <div className="flex items-start gap-4">
+      <div
+        className="grid size-14 shrink-0 place-items-center border border-seal bg-seal font-display text-2xl text-card"
+        aria-hidden
+      >
+        調
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs tracking-widest text-seal">{tagline}</p>
+        <h1 className="font-display text-2xl font-semibold leading-tight md:text-3xl">{title}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-muted">{intro}</p>
+      </div>
+    </div>
+  );
+}
+
+/** 調査データがまだない区。壊れた画面にせず、準備中であることと区の公式情報（確認済みのもののみ）を出す。 */
+function PreparingDesk({ ward, picker }: { ward: Ward; picker: ReactNode }) {
+  const links = [
+    ward.surveyGuideUrl && { href: ward.surveyGuideUrl, label: "区の不動産調査向け案内" },
+    ward.officialSiteUrl && { href: ward.officialSiteUrl, label: "区の公式サイト" },
+  ].filter((link): link is { href: string; label: string } => Boolean(link));
+
+  return (
+    <div className="min-h-screen bg-paper text-ink">
+      <header className="border-b border-line bg-card">
+        <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
+          {picker}
+          <Masthead
+            tagline="TOKYO 23 WARDS · REAL ESTATE"
+            title={`${ward.name} 売買役所調査台帳`}
+            intro="区ごとの調査項目、窓口、電話、公式の調べ先をまとめる台帳です。"
+          />
+        </div>
+      </header>
+      <main className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+        <section className="border border-dashed border-line bg-card px-4 py-10 text-center" aria-live="polite">
+          <p className="font-display text-xl">データ準備中</p>
+          <p className="mt-2 text-sm text-muted">
+            {ward.name}の調査項目はまだ載せていません。公式情報で確認してから追加します。上の区の選択から、調査データのある区に切り替えられます。
+          </p>
+          {links.length > 0 && (
+            <p className="mt-4 flex flex-wrap justify-center gap-3 text-sm">
+              {links.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-seal underline decoration-line underline-offset-2"
+                >
+                  {link.label}
+                  <ExternalLink className="size-3.5" />
+                </a>
+              ))}
+            </p>
+          )}
+        </section>
+        <footer className="mt-10 border-t border-line pt-6 text-xs leading-relaxed text-muted">
+          <p>この台帳は行政の証明書ではありません。重説や契約の判断の前に、原典と窓口で確認してください。</p>
+        </footer>
+      </main>
+    </div>
+  );
 }
