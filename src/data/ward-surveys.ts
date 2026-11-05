@@ -3,10 +3,16 @@
  * 他区のデータは公式情報で確認してから `src/data/wards/<区>.ts` を作り、ここに足す。
  */
 import type { WardSurvey } from "./survey.ts";
+import { MINATO } from "./wards/minato.ts";
+import { SETAGAYA } from "./wards/setagaya.ts";
+import { SHIBUYA } from "./wards/shibuya.ts";
 import { SHINJUKU } from "./wards/shinjuku.ts";
 
 export const WARD_SURVEYS: Readonly<Record<string, WardSurvey>> = {
   [SHINJUKU.wardId]: SHINJUKU,
+  [SHIBUYA.wardId]: SHIBUYA,
+  [MINATO.wardId]: MINATO,
+  [SETAGAYA.wardId]: SETAGAYA,
 };
 
 /** 調査データがない区は undefined（画面は「データ準備中」を出す）。 */

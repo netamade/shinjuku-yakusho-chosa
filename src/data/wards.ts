@@ -23,7 +23,14 @@ export type Ward = {
 export const WARDS: readonly Ward[] = [
   { id: "chiyoda", code: "13101", name: "千代田区", kana: "ちよだく", officialSiteUrl: null, surveyGuideUrl: null },
   { id: "chuo", code: "13102", name: "中央区", kana: "ちゅうおうく", officialSiteUrl: null, surveyGuideUrl: null },
-  { id: "minato", code: "13103", name: "港区", kana: "みなとく", officialSiteUrl: null, surveyGuideUrl: null },
+  {
+    id: "minato",
+    code: "13103",
+    name: "港区",
+    kana: "みなとく",
+    officialSiteUrl: "https://www.city.minato.tokyo.jp/",
+    surveyGuideUrl: "https://www.city.minato.tokyo.jp/kenchikufunsou/kankyo-machi/kenchiku/toiawase.html",
+  },
   {
     id: "shinjuku",
     code: "13104",
@@ -39,8 +46,23 @@ export const WARDS: readonly Ward[] = [
   { id: "shinagawa", code: "13109", name: "品川区", kana: "しながわく", officialSiteUrl: null, surveyGuideUrl: null },
   { id: "meguro", code: "13110", name: "目黒区", kana: "めぐろく", officialSiteUrl: null, surveyGuideUrl: null },
   { id: "ota", code: "13111", name: "大田区", kana: "おおたく", officialSiteUrl: null, surveyGuideUrl: null },
-  { id: "setagaya", code: "13112", name: "世田谷区", kana: "せたがやく", officialSiteUrl: null, surveyGuideUrl: null },
-  { id: "shibuya", code: "13113", name: "渋谷区", kana: "しぶやく", officialSiteUrl: null, surveyGuideUrl: null },
+  {
+    id: "setagaya",
+    code: "13112",
+    name: "世田谷区",
+    kana: "せたがやく",
+    officialSiteUrl: "https://www.city.setagaya.lg.jp/",
+    surveyGuideUrl: "https://www.city.setagaya.lg.jp/02008/3673.html",
+  },
+  {
+    id: "shibuya",
+    code: "13113",
+    name: "渋谷区",
+    kana: "しぶやく",
+    officialSiteUrl: "https://www.city.shibuya.tokyo.jp/",
+    surveyGuideUrl:
+      "https://www.city.shibuya.tokyo.jp/kusei/kocho/faq-about-public-hearing/faq-about-urban-planning-zoning.html",
+  },
   { id: "nakano", code: "13114", name: "中野区", kana: "なかのく", officialSiteUrl: null, surveyGuideUrl: null },
   { id: "suginami", code: "13115", name: "杉並区", kana: "すぎなみく", officialSiteUrl: null, surveyGuideUrl: null },
   { id: "toshima", code: "13116", name: "豊島区", kana: "としまく", officialSiteUrl: null, surveyGuideUrl: null },
