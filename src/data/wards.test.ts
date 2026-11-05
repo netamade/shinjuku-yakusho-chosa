@@ -13,9 +13,9 @@ describe("区マスタ", () => {
     for (const w of WARDS) assert.match(w.name, /区$/);
   });
 
-  it("新宿区以外の公式URLは未確認のため null", () => {
+  it("調査データのない区の公式URLは未確認のため null", () => {
     for (const w of WARDS) {
-      if (w.id === "shinjuku") continue;
+      if (hasSurvey(w.id)) continue;
       assert.equal(w.officialSiteUrl, null, w.name);
       assert.equal(w.surveyGuideUrl, null, w.name);
     }
@@ -23,6 +23,14 @@ describe("区マスタ", () => {
 
   it("新宿区の案内ページは調査データの出典と一致する", () => {
     assert.equal(findWard("shinjuku")?.surveyGuideUrl, SHINJUKU.sourceGuide);
+  });
+
+  it("渋谷区・港区・世田谷区の案内ページは調査データの出典と一致する", () => {
+    for (const id of ["shibuya", "minato", "setagaya"]) {
+      const ward = findWard(id);
+      assert.ok(ward?.officialSiteUrl, id);
+      assert.equal(ward?.surveyGuideUrl, surveyOf(id)?.sourceGuide, id);
+    }
   });
 
   it("既定の区は新宿区", () => {
@@ -59,10 +67,10 @@ describe("区の検索", () => {
 });
 
 describe("区ごとの調査データ", () => {
-  it("調査データがあるのは新宿区のみ", () => {
-    assert.deepEqual(Object.keys(WARD_SURVEYS), ["shinjuku"]);
-    assert.equal(hasSurvey("shinjuku"), true);
-    for (const w of WARDS) if (w.id !== "shinjuku") assert.equal(hasSurvey(w.id), false, w.name);
+  it("調査データがあるのは新宿区・渋谷区・港区・世田谷区", () => {
+    const ready = ["shinjuku", "shibuya", "minato", "setagaya"];
+    assert.deepEqual(Object.keys(WARD_SURVEYS), ready);
+    for (const w of WARDS) assert.equal(hasSurvey(w.id), ready.includes(w.id), w.name);
   });
 
   it("登録された調査データは区マスタの区を指す", () => {

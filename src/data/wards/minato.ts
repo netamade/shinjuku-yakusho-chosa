@@ -1,0 +1,272 @@
+/**
+ * 港区の調査項目。
+ * 整理の軸：「建築物の計画等をする際の問い合わせ先一覧」および「港区都市計画情報提供サービス」
+ * （Gemini作成の下書き。公式ページとの照合後に収録すること）
+ */
+import type { SurveyItem, WardSurvey } from "../survey.ts";
+
+export type StopId =
+  | "prep"
+  | "gis"
+  | "homu"
+  | "3f-shiryo"
+  | "5f-doboku"
+  | "6f-toshi"
+  | "6f-kenchiku"
+  | "6f-kaihatsu"
+  | "tozei"
+  | "metro"
+  | "life";
+
+export const MINATO_SOURCE_GUIDE =
+  "https://www.city.minato.tokyo.jp/kenchikufunsou/kankyo-machi/kenchiku/toiawase.html";
+
+export const MINATO_GIS = "https://www.city.minato.tokyo.jp/toshikeikaku/kuse/kocho/faq/kenchiku/035.html";
+
+export const STOPS: { id: StopId; label: string; where: string }[] = [
+  { id: "prep", label: "出る前", where: "社内・オンライン" },
+  { id: "gis", label: "港区都市計画情報", where: "来庁前に印刷" },
+  { id: "homu", label: "法務局", where: "東京法務局 港出張所（東麻布）" },
+  { id: "3f-shiryo", label: "3階 区政資料室", where: "本庁舎3階" },
+  { id: "5f-doboku", label: "5階 土木", where: "本庁舎5階 505-1（土木管理係）" },
+  { id: "6f-toshi", label: "6階 都市計画", where: "本庁舎6階 601" },
+  { id: "6f-kenchiku", label: "6階 建築", where: "本庁舎6階 605-A（建築事務）・605-B（建築審査）" },
+  { id: "6f-kaihatsu", label: "6階 開発・景観", where: "本庁舎6階 開発指導課" },
+  { id: "tozei", label: "都税", where: "港都税事務所（麻布台）" },
+  { id: "metro", label: "都・国", where: "第一建設事務所など" },
+  { id: "life", label: "供給事業者", where: "水道・下水・ガス" },
+];
+
+export const CATEGORIES = [
+  "物件の特定",
+  "都市計画",
+  "道路・接道",
+  "建築制限・台帳",
+  "地区計画・景観",
+  "開発・盛土",
+  "災害",
+  "文化財・土壌",
+  "インフラ・生活",
+  "税・価格の参考",
+] as const;
+
+export const ITEMS: (SurveyItem & { stop: StopId })[] = [
+  {
+    id: "registry",
+    category: "物件の特定",
+    title: "登記事項・公図・地積測量図",
+    priority: "must",
+    channel: "offsite",
+    stop: "homu",
+    why: "売買の権利関係、実測との差の確認。",
+    points: ["全部事項", "公図", "地積測量図"],
+    how: "東京法務局港出張所。本庁舎からは少し距離がある（東麻布エリア）。",
+    place: "港区東麻布2-11-11",
+    tel: "03-3586-2181",
+    href: "https://houmukyoku.moj.go.jp/tokyo/table/shikyokutou/all/minato.html",
+    hrefLabel: "東京法務局 港出張所",
+  },
+  {
+    id: "youto",
+    category: "都市計画",
+    title: "用途地域等の都市計画情報",
+    priority: "must",
+    channel: "both",
+    stop: "gis",
+    why: "用途地域などの都市計画情報の確認。",
+    points: ["用途地域", "高度地区", "防火地域等"],
+    how: "港区都市計画情報提供サービスで確認可。窓口の場合は6階都市計画課。また3階区政資料室で概要図の購入も可能。",
+    place: "都市計画課 都市計画係 本庁舎6階 601",
+    tel: "03-3578-2215",
+    href: MINATO_GIS,
+    hrefLabel: "都市計画情報の確認手段（FAQ）",
+  },
+  {
+    id: "road-type",
+    category: "道路・接道",
+    title: "建築基準法の道路種別",
+    priority: "must",
+    channel: "both",
+    stop: "6f-kenchiku",
+    why: "接道要件やセットバックの確認。",
+    points: ["道路種別"],
+    how: "建築課窓口での確認。区道の境界・法定外公共物などは5階の土木管理課で確認する。2項道路については開発指導課 開発指導係（608-H）も関係する。",
+    place: "建築課 建築審査係 本庁舎6階 605-B",
+    tel: "03-3578-2290",
+    href: "https://www.city.minato.tokyo.jp/kenchikushinsa/douroshubetsu/shubetsu.html",
+    hrefLabel: "建築基準法の道路種別",
+  },
+  {
+    id: "road-width",
+    category: "道路・接道",
+    title: "道路台帳・境界確定図",
+    priority: "must",
+    channel: "counter",
+    stop: "5f-doboku",
+    why: "現況幅員と認定幅員の確認。境界確定図の交付。",
+    points: ["道路台帳平面図", "境界確定図"],
+    how: "窓口にて境界確定図の交付（有料）を実施。",
+    place: "土木管理課 土木管理係 本庁舎5階 505-1",
+    tel: "03-3578-2251",
+    href: "https://www.city.minato.tokyo.jp/dourodaichou/kankyo-machi/kotsu/shisaku/dorodaicho.html",
+    hrefLabel: "道路台帳・境界確定図",
+  },
+  {
+    id: "gaiyo",
+    category: "建築制限・台帳",
+    title: "建築計画概要書の閲覧",
+    priority: "must",
+    channel: "counter",
+    stop: "6f-kenchiku",
+    why: "適法性と審査履歴の確認。",
+    points: ["確認番号", "検査済証の有無"],
+    how: "建築課窓口にて閲覧申請等を行う。",
+    place: "建築課 建築事務係 本庁舎6階 605-A",
+    tel: "03-3578-2281",
+    href: "https://www.city.minato.tokyo.jp/soshiki/kenchiku.html",
+    hrefLabel: "建築課の業務案内",
+  },
+  {
+    id: "district-plan",
+    category: "地区計画・景観",
+    title: "地区計画",
+    priority: "must",
+    channel: "both",
+    stop: "6f-toshi",
+    why: "用途・高さ・デザインなど、用途地域より詳細な建築制限がかかるため。",
+    points: ["地区計画区域", "届出の要否と基準"],
+    how: "港区都市計画情報提供サービス（GIS）で区域を確認し、詳細は都市計画課窓口にて。",
+    place: "都市計画課 都市計画係 本庁舎6階 601",
+    tel: "03-3578-2215",
+    href: "https://www.city.minato.tokyo.jp/toshikeikaku/toshikeikaku/chikukeikaku/chikukeikakukenchikuseigen.html",
+    hrefLabel: "地区計画",
+  },
+  {
+    id: "keikan",
+    category: "地区計画・景観",
+    title: "景観計画",
+    priority: "usual",
+    channel: "both",
+    stop: "6f-kaihatsu",
+    why: "港区景観計画に基づく届出対象となる建築行為の確認。",
+    points: ["景観計画区域の該当", "景観形成基準"],
+    how: "GISで区域等を確認。届出対象規模に該当する場合は開発指導課へ。",
+    place: "開発指導課 景観指導係 本庁舎6階 608-G",
+    tel: "03-3578-2231",
+    href: "https://www.city.minato.tokyo.jp/sougoukeikaku/kankyo-machi/toshikekaku/kekaku/kekan/",
+    hrefLabel: "港区景観計画",
+  },
+  {
+    id: "flood",
+    category: "災害",
+    title: "ハザードマップ（浸水・土砂災害など）",
+    priority: "must",
+    channel: "online",
+    stop: "prep",
+    why: "水防法等に基づく重説事項。高潮・洪水・内水・土砂災害の危険区域確認。",
+    points: ["洪水・高潮・内水浸水想定", "土砂災害警戒区域"],
+    how: "港区公式HP「港区ハザードマップ」で該当区域を閲覧。",
+    place: "洪水：土木課 土木計画係 本庁舎5階 504-2／津波・高潮・土砂：防災課 防災政策係 本庁舎5階 501",
+    tel: "未確認",
+    href: "https://www.city.minato.tokyo.jp/dobokukeikaku/bosai-anzen/bosai/shinsui/hazard-map/",
+    hrefLabel: "港区ハザードマップ",
+  },
+  {
+    id: "bunkazai",
+    category: "文化財・土壌",
+    title: "埋蔵文化財包蔵地",
+    priority: "must",
+    channel: "online",
+    stop: "prep",
+    why: "該当区域での土木工事は届出が必要となるため。",
+    points: ["周知の埋蔵文化財包蔵地"],
+    how: "東京都遺跡地図、または港区公式HPで確認。区役所本庁舎ではなく教育委員会の管轄窓口となることが多い点に注意。",
+    place: "図書文化財課 文化財係（白金台4-6-2 ゆかしの杜6階）",
+    tel: "03-6450-2869",
+    href: "https://www.city.minato.tokyo.jp/bunkazai/houzouti.html",
+    hrefLabel: "埋蔵文化財について",
+  },
+  {
+    id: "dojo",
+    category: "文化財・土壌",
+    title: "土壌汚染等の環境系規制",
+    priority: "usual",
+    channel: "counter",
+    stop: "prep",
+    why: "規制区域の該当有無。",
+    points: ["環境系規制"],
+    how: "「問い合わせ先一覧」資料に基づき、環境アセスメントや土壌汚染については環境課等で確認。",
+    place: "環境課 環境指導アセスメント係 本庁舎8階 801（都条例）／都環境局 化学物質対策課（法の区域指定）",
+    href: "https://www.city.minato.tokyo.jp/documents/12167/r080401_toiawasesakiichiran.pdf",
+    hrefLabel: "建築物の計画等をする際の問い合わせ先一覧",
+  },
+  {
+    id: "suido",
+    category: "インフラ・生活",
+    title: "上水道・下水道の埋設状況",
+    priority: "usual",
+    channel: "offsite",
+    stop: "life",
+    why: "前面道路の管有無、宅地内引込み状況の確認。",
+    points: ["配水管の有無", "引込み口径"],
+    how: "東京都水道局・下水道局で確認。港区役所窓口では調査不可。",
+    place: "東京都水道局・下水道局",
+    href: "https://www.waterworks.metro.tokyo.lg.jp/",
+    hrefLabel: "東京都水道局（公式）",
+  },
+  {
+    id: "gas",
+    category: "インフラ・生活",
+    title: "都市ガスの本支管",
+    priority: "usual",
+    channel: "offsite",
+    stop: "life",
+    why: "供給網・引込み有無の確認。",
+    points: ["本支管の有無"],
+    how: "東京ガス等の供給事業者へ直接照会。",
+    place: "供給事業者",
+    href: "https://www.tokyo-gas.co.jp/",
+    hrefLabel: "東京ガス",
+  },
+  {
+    id: "kotei",
+    category: "税・価格の参考",
+    title: "固定資産評価証明・公課証明",
+    priority: "must",
+    channel: "offsite",
+    stop: "tozei",
+    why: "税額清算・融資用資料。",
+    points: ["評価証明", "公課証明"],
+    how: "港都税事務所の窓口で取得。本庁舎からは離れている。",
+    place: "港都税事務所（港区麻布台3-5-6）",
+    tel: "03-5549-3800",
+    href: "https://www.tax.metro.tokyo.lg.jp/jimusho/t_minato",
+    hrefLabel: "港都税事務所",
+  },
+];
+
+export const MINATO: WardSurvey = {
+  wardId: "minato",
+  tagline: "MINATO · REAL ESTATE",
+  intro: "港区役所本庁舎（芝公園1-5-25）を中心とした調査用台帳。各課の担当窓口が極めて細かく分かれているため、公式の「問い合わせ先一覧」PDFを事前に手元に置くことを推奨します。",
+  sourceGuide: MINATO_SOURCE_GUIDE,
+  sourceGuideLinkLabel: "建築物の計画等をする際の問い合わせ先一覧",
+  stops: STOPS,
+  categories: CATEGORIES,
+  items: ITEMS,
+  route: {
+    title: "5階と6階を中心に。都税・法務局は離れているので計画的に",
+    body: "港区本庁舎内では、5階（土木・道路台帳・交通）と6階（建築・都市計画・開発）で主要な役所調査が完結します。窓口（605-Bや505-1など）が細かく指定されているため、総合案内やフロアマップで場所を特定してください。法務局（東麻布）と港都税事務所（麻布台）は本庁舎から少し離れており、いずれも本庁舎から離れているため、移動時間を見込んだ計画が必要です。",
+    tips: [
+      "港区が発行している「建築物の計画等をする際の問い合わせ先一覧・チェックリスト」は、窓口番号まで網羅されている不動産調査の必携資料です。来庁前に必ずダウンロードしてください。",
+      "具体的な建築相談には事前予約制が敷かれています。",
+    ],
+  },
+  footerNotes: [
+    "整理の軸は港区「建築物の計画等をする際の問い合わせ先一覧」（2026年4月1日更新版等）です。",
+    "代表的な窓口のみを抽出しています。指定区域や規模による都庁対応案件（延床1万平米超など）は含まれません。",
+  ],
+  exportNotes: [
+    "※港区は窓口が細分化されています。訪問時は係名と窓口番号（例: 605-B）をセットで控えてください。",
+  ],
+};
