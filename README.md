@@ -42,6 +42,15 @@
 
 新宿区専用だった頃のキー `shinjuku-yakusho-v1` は、初回起動時に一度だけ `ward-yakusho:v1:shinjuku` へ写します。新キーに既にデータがあれば上書きせず、旧キーは消さずに残します。
 
+## GitHub Pages への公開
+
+Desk (本体) は静的データと localStorage だけで動作する。サーバー機能は使わないので、TanStack Start を SPA モードでビルドし、その静的成果物を GitHub Pages で配信する。認証・DB まわりのスキャフォールドは残っているが、Pages では `/api/auth` などは利用できない。公開ページでは未ログインとして扱われ、台帳の入力・保存は localStorage で行われる。
+
+- 公開URL: https://netamade.github.io/shinjuku-yakusho-chosa/
+- 公開用のビルド: `npm run build:pages` (SPA モードで `dist/pages` に静的成果物を集約する)
+- デプロイ: `.github/workflows/deploy-pages.yml` (main への push で GitHub Pages にデプロイする。PR ではビルドと `npm run test:ts` のみ検証する)
+- 手元の確認: `npm run build:pages` のあと、`dist/pages` へのシンボリックリンクを `/tmp/pages/shinjuku-yakusho-chosa` に置き、`python3 -m http.server --directory /tmp/pages` で配信して `/shinjuku-yakusho-chosa/` を開く
+
 ## 開発
 
 ```bash

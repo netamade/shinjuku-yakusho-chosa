@@ -145,7 +145,12 @@ function authPopupPlugin(): Plugin {
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist — see
 // AGENTS.md § "First scaffold".
+// GitHub Pages (静的公開) 向けビルド。VITE_PAGES_BUILD=true のときだけ SPA モードとサブパス base を有効にし、dev / Vercel は従来どおり SSR + Nitro (Vercel) のままにする。
+const isPagesBuild = process.env.VITE_PAGES_BUILD === "true";
+const pagesBasePath = "/shinjuku-yakusho-chosa";
+
 export default defineConfig(({ command, isPreview }) => ({
+  base: isPagesBuild ? pagesBasePath + "/" : "/",
   server: {
     host: "0.0.0.0",
     port: 8080,
@@ -166,7 +171,7 @@ export default defineConfig(({ command, isPreview }) => ({
     // PWA head + ?install=1 tutorial page; runs before Start/Nitro.
     grokPwaPlugin(),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart(isPagesBuild ? { spa: { enabled: true } } : {}),
     ...(command === "build" || isPreview
       ? [
           nitro({
